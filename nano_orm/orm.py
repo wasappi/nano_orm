@@ -69,6 +69,13 @@ class BaseModel(metaclass=MetaModel):
             if key in self._fields:
                 setattr(self, key, value)
 
+    def __repr__(self):
+        pretty_print = f"{self.__class__.__name__}(id={self.id})\n"
+        for key, field in self._fields.items():
+            val = getattr(self, key)
+            pretty_print += f"  - {key}: {val}\n"
+        return pretty_print
+
     @classmethod
     def create_table(cls):
         """Generate SQL query to create table in DB"""
@@ -107,7 +114,7 @@ class BaseModel(metaclass=MetaModel):
 
         colums_str = ", ".join(fields_to_insert)
         placeholders_str = ", ".join(placeholders)
-        query = f"INSERT INTO {cls._table} {colums_str} VALUE ({placeholders_str});"
+        query = f"INSERT INTO {cls._table} ({colums_str}) VALUES ({placeholders_str});"
 
         connection = database.get_connection()
         cursor = connection.cursor()
@@ -120,5 +127,112 @@ class BaseModel(metaclass=MetaModel):
 
         instance = cls(**kwargs)
         instance.id = generated_id
+
+        return instance
+
+    @classmethod
+    def get(cls, record_id):
+        """Fetch and return the object associated with this id"""
+        result = cls.search(id=record_id)
+        return result[0] if result else None
+
+    @classmethod
+    def search(cls, **kwargs):
+        """Base query SELECT id, name ,price FROM product"""
+        query = f"SELECT id, {' ,'.join(cls._fields.keys())} FROM {cls._table}"
+        
+        # Where clause fitlers
+        values = []
+        if kwargs:
+            filters = []
+            for key, value in kwargs.items():
+                if key == "id":
+                    filters.append("id = ?")
+                elif key in cls._fields:
+                    filters.append(f"{key} = ?")
+                values.append(value)
+
+            if filters:
+                query += " WHERE " + " AND ".join(filters)
+
+        query += ";"
+
+        connection = database.get_connection()
+        cursor = connection.cursor()
+        cursor.execute(query, values)
+        rows = cursor.fetchall()
+        connection.close()
+
+        # SQL objects To Python objects
+        instances = []
+        for row in rows:
+            instance_data = {"id": row[0]}
+            print(row)
+            for index, field_name in enumerate(cls._fields.keys()):
+                instance_data[field_name] = row[index + 1]
+
+            row_id = instance_data.pop("id")
+            instance = cls(**instance_data)
+            instance.id = row_id
+
+            instances.append(instance)
+
+        return instances
+
+    def update(self, **kwargs):
+        """Update fields from existing reccord"""
+        if not self.id:
+            raise ValueError("Object ID not found")
+
+        fields_to_update = []
+        values = []
+        for key, value in kwargs.items():
+            fields_to_update.append(f"{key} = ?")
+            values.append(value)
+            setattr(self, key, value)
+
+        if not fields_to_update:
+            return False
+
+        fields_str = ", ".join(fields_to_update)
+        query = f"UPDATE {self._table} SET {fields_str} WHERE id = ?"
+        
+        values.append(self.id)
+        
+        connection = database.get_connection()
+        cursor = connection.cursor()
+        cursor.execute(query, values)
+        connection.commit()
+        connection.close()
+
+        return True
+
+
+    def delete(self):
+        """Delete reccord"""
+        if not self.id:
+            raise ValueError("Object ID not found")
+        query = f"DELETE FROM {self._table} WHERE id = ?"
+
+        connection = database.get_connection()
+        cursor = connection.cursor()
+        cursor.execute(query, [self.id])
+        connection.commit()
+        connection.close()
+
+        self.id = None
+
+        return True
+
+
+
+
+
+
+
+
+
+
+
 
 
