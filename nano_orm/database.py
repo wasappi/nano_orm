@@ -1,12 +1,11 @@
 import sqlite3
-#from pathlib import Path
-
-DB_NAME = "nano_orm_v1.db"
 
 def get_connection():
-    return sqlite3.connect(DB_NAME)
+    connection = sqlite3.connect(_db_name)
+    connection.execute("PRAGMA foreign_keys = ON;")
+    return connection
 
-def initialize_db():
-    connection = get_connection()
-    connection.close()
+def init_db(db_name):
+    global _db_name
+    _db_name = db_name
 

@@ -1,41 +1,40 @@
 from nano_orm import database
-from nano_orm.orm import BaseModel, CharField, IntegerField
+from nano_orm.orm import BaseModel, CharField, IntegerField, BelongsTo, HasMany
 
-database.initialize_db()
 
-class Product(BaseModel):
+
+# class Product(BaseModel):
+#     name = CharField(required=True)
+#     price = IntegerField()
+
+
+
+class PingResult(BaseModel):
+    status_code = IntegerField()
+    target = BelongsTo("Target", required=True)
+
+class Target(BaseModel):
     name = CharField(required=True)
-    price = IntegerField()
+    url = CharField(required=True)
+    pings = HasMany("PingResult", foreign_key_name="target")
 
 
-print("Create table ...")
-Product.create_table()
-print("Table succesfully created !")
+database.init_db("test_watcher.db")
+# Target.create_table()
+# PingResult.create_table()
 
-# print("Create 1st reccord")
-#prod3 = Product.create(name="TO delete", price=999)
-# prod2 = Product.create(name="Keychron B1", price=49)
+# web1 = Target.create(name="API Production", url="https://api.website.com")
 
-# print(prod1)
-# print(prod2)
+# ping1 = PingResult.create(target=web1, status_code=200)
+# ping2 = PingResult.create(target=web1, status_code=200)
+# ping3 = PingResult.create(target=web1, status_code=500)
 
-print("\n Search all products :")
-all_products = Product.search()
-for p in all_products:
-    print(p)
 
-print("\n Search specific product (price = 49) :")
-specific_product = Product.search(price=49)
-print(specific_product)
+# pings = web1.pings
+# print("Results: ")
+# print(f"{web1.name} has {len(pings)} pings")
+# for ping in pings:
+#     print(f"{ping.id} - {ping.status_code}")
 
-product_2 = Product.get(2)
-if product_2.update(price=59):
-    print(product_2)
-
-product_3 = Product.get(3)
-product_3.delete()
-
-print("\n Search all products :")
-all_products = Product.search()
-for p in all_products:
-    print(p)
+# web1 = Target.get(3)
+# web1.delete()
